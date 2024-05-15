@@ -1,0 +1,158 @@
+﻿@page "/employees"
+@rendermode InteractiveServer
+@using TaxApp.DataModels
+@using TaxApp.ViewModels
+@using System.Linq
+
+@inject ViewModels.TaxBand TaxBand
+@inject DataModels.TaxCalculatorService TaxCalculator
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999; /* Ensure it's on top of other elements */
+    }
+
+    .modal-box {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+</style>
+
+<h3>Search</h3>
+<div class="search">
+    <input type="text" @bind="searchTerm" />
+    <button @onclick="Search">Search</button>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Gross Annual Salary</th>
+            <th>View</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var employee in FilteredEmployees)
+        {
+            <tr>
+                <td>@employee.FirstName</td>
+                <td>@employee.LastName</td>
+                <td>@employee.AnnualSalary</td>
+                <td><button @onclick="() => ViewEmployee(employee)">View</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (SelectedEmployee != null)
+{
+    <!-- Modal overlay -->
+    <div class="modal-overlay">
+        <!-- Modal box -->
+        <div class="modal-box">
+            <button style="float:right;" @onclick="CloseModal">X</button>
+            <h3>@($"{SelectedEmployee.FirstName} {SelectedEmployee.LastName}")</h3>
+            <div class="detail-row">
+                <span>Gross Annual Salary:</span>
+                <span><input type="number" @bind="@SelectedEmployee.AnnualSalary" /> <button style="float:right;" @onclick="EditSalary">Edit</button></span>
+            </div>
+            <div class="detail-row">
+                <span>Gross Monthly Salary:</span>
+                <span>£ @Math.Round((SelectedEmployee.AnnualSalary / 12),2)</span>
+            </div>
+            <div class="detail-row">
+                <span>Net Annual Salary:</span>
+                <span>£ @Math.Round((CalculateNetSalary(SelectedEmployee.AnnualSalary)), 2)</span>
+            </div>
+            <div class="detail-row">
+                <span>Net Monthly Salary:</span>
+                <span>£ @Math.Round((CalculateNetSalary(SelectedEmployee.AnnualSalary) / 12), 2)</span>
+            </div>
+            <div class="detail-row">
+                <span>Annual Tax Paid:</span>
+                <span>£ @Math.Round((TaxCalculator.CalculateTax(SelectedEmployee.AnnualSalary)), 2)</span>
+            </div>
+            <div class="detail-row">
+                <span>Monthly Tax Paid:</span>
+                <span>£ @Math.Round((TaxCalculator.CalculateTax(SelectedEmployee.AnnualSalary) / 12), 2)</span>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<Employee> Employees;
+    List<Employee> FilteredEmployees = new List<Employee>();
+    string searchTerm = "";
+    Employee SelectedEmployee;
+
+    protected override void OnInitialized()
+    {
+        // Initialize Employees list (replace this with actual data retrieval)
+        Employees = new List<Employee>
+        {
+            new Employee { EmployeeId = 1, FirstName = "John", LastName = "Doe", AnnualSalary = 40000 },
+            new Employee { EmployeeId = 2, FirstName = "Jane", LastName = "Doe", AnnualSalary = 50000 }
+        };
+
+        // Initialize FilteredEmployees with all Employees initially
+        FilteredEmployees.AddRange(Employees);
+    }
+
+    void Search()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            FilteredEmployees.Clear();
+            FilteredEmployees.AddRange(Employees);
+        }
+        else
+        {
+            FilteredEmployees = Employees.Where(e =>
+                e.FirstName.ToLower().Contains(searchTerm.ToLower()) ||
+                e.LastName.ToLower().Contains(searchTerm.ToLower())
+            ).ToList();
+        }
+    }
+
+    void ViewEmployee(Employee employee)
+    {
+        SelectedEmployee = employee;
+    }
+
+    // Close modal function
+    void CloseModal()
+    {
+        SelectedEmployee = null;
+    }
+
+    void EditSalary()
+    {
+        // Update the employee's salary
+        // This is a placeholder for actual database update logic
+        // Replace with your database update logic
+        // For demonstration purpose, we're updating in-memory list directly
+        SelectedEmployee.AnnualSalary = SelectedEmployee.AnnualSalary;
+
+        // Update tax calculations based on the new salary
+        StateHasChanged();
+    }
+
+    decimal CalculateNetSalary(decimal annualSalary)
+    {
+        return annualSalary - TaxCalculator.CalculateTax(annualSalary);
+    }
+}
